@@ -1,5 +1,39 @@
 # Changes
 
+## 0.16
+
+- fix(runner): detect more failures in the runner
+- fix: catch exceptions in generators and log them. (#99)
+- test: add test for #99
+- fix doc
+
+## 0.15
+
+- fix: in main runner, remove reset line in more places if `colors=false`
+- fix: invalid arg in `int_range` when a<0
+- fix(runner): do not use ansi code for random seed if `colors=false`
+- feat: on `>=4.08`, provide let operators
+
+## 0.14
+
+- modify `int_range` to make it accept ranges bigger than `max_int`.
+- less newline-verbose stats
+- add `int{32,64}` shrinkers to arbitrary gens
+- add `int{32,int64}` shrinkers
+- move to ounit2 for `QCheck_ounit`
+
+## 0.13
+
+- make counter private
+- Add debug shrinking log
+- fix: small fix related to stdlib/pervasives
+- feat: add flatten combinators in `gen`
+
+## 0.12
+
+- fix singleton list shrinking
+- feat: add `Gen.char_range` and `Gen.(<$>)` (credit @spewspews)
+
 ## 0.11
 
 - Add `QCheck.Gen.{string_of,string_readable}`

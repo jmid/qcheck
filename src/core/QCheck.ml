@@ -6,6 +6,7 @@ all rights reserved.
 
 (** {1 Quickcheck inspired property-based testing} *)
 
+let poly_compare=compare
 open Printf
 
 module RS = Random.State
@@ -161,7 +162,20 @@ module Gen = struct
     else fun st -> let r = pint st in r mod (n + 1)
   let int_range a b =
     if b < a then invalid_arg "Gen.int_range";
-    fun st -> a + (int_bound (b-a) st)
+    if a >= 0 || b <= 0 then (
+      (* range smaller than max_int *)
+      assert (b-a >= 0);
+      fun st -> a + (int_bound (b-a) st)
+    ) else (
+      (* range potentially bigger than max_int: we split on 0 and
+         choose the itv wrt to their size ratio *)
+      fun st ->
+      let f_a = float_of_int a in
+      let ratio = (-.f_a) /. (float_of_int b -. f_a) in
+      if Random.float 1. < ratio then - (int_bound (abs a) st)
+      else int_bound b st
+    )
+
   let (--) = int_range
 
   (* NOTE: we keep this alias to not break code that uses [small_int]
@@ -198,6 +212,17 @@ module Gen = struct
   let array gen st = array_size nat gen st
   let array_repeat n g = array_size (return n) g
 
+  let flatten_l l st = List.map (fun f->f st) l
+  let flatten_a a st = Array.map (fun f->f st) a
+  let flatten_opt o st =
+    match o with
+    | None -> None
+    | Some f -> Some (f st)
+  let flatten_res r st =
+    match r with
+    | Ok f -> Ok (f st)
+    | Error e -> Error e
+
   let shuffle_a a st =
     for i = Array.length a-1 downto 1 do
       let j = Random.State.int st (i+1) in
@@ -217,7 +242,7 @@ module Gen = struct
       (float_bound_inclusive 1. st ** (1. /. fl_w), v)
     in
     let samples = List.rev_map sample l in
-    List.sort (fun (w1, _) (w2, _) -> compare w1 w2) samples |> List.rev_map snd
+    List.sort (fun (w1, _) (w2, _) -> poly_compare w1 w2) samples |> List.rev_map snd
 
   let pair g1 g2 st = (g1 st, g2 st)
 
@@ -279,6 +304,13 @@ module Gen = struct
     list_repeat n g rand
 
   let generate1 ?(rand=Random.State.make_self_init()) g = g rand
+
+  include Qcheck_ops.Make(struct
+      type nonrec 'a t = 'a t
+      let (>|=) = (>|=)
+      let monoid_product a b = map2 (fun x y -> x,y) a b
+      let (>>=) = (>>=)
+    end)
 end
 
 module Print = struct
@@ -353,6 +385,13 @@ module Iter = struct
     !r
 
   let find p iter = find_map (fun x->if p x then Some x else None) iter
+
+  include Qcheck_ops.Make(struct
+      type nonrec 'a t = 'a t
+      let (>|=) = (>|=)
+      let monoid_product a b = map2 (fun x y -> x,y) a b
+      let (>>=) = (>>=)
+    end)
 end
 
 module Shrink = struct
@@ -369,6 +408,24 @@ module Shrink = struct
     while !y < -2 || !y >2 do y := !y / 2; yield (x - !y); done; (* fast path *)
     if x>0 then yield (x-1);
     if x<0 then yield (x+1);
+    ()
+
+  let int32 x yield =
+    let open Int32 in
+    let y = ref x in
+    (* try some divisors *)
+    while !y < -2l || !y > 2l do y := div !y 2l; yield (sub x !y); done; (* fast path *)
+    if x>0l then yield (pred x);
+    if x<0l then yield (succ x);
+    ()
+
+  let int64 x yield =
+    let open Int64 in
+    let y = ref x in
+    (* try some divisors *)
+    while !y < -2L || !y > 2L do y := div !y 2L; yield (sub x !y); done; (* fast path *)
+    if x>0L then yield (pred x);
+    if x<0L then yield (succ x);
     ()
 
   (* aggressive shrinker for integers,
@@ -659,8 +716,12 @@ let small_signed_int = make_int Gen.small_signed_int
 let small_int_corners () = make_int (Gen.nng_corners ())
 let neg_int = make_int Gen.neg_int
 
-let int32 = make_scalar ~print:(fun i -> Int32.to_string i ^ "l") Gen.ui32
-let int64 = make_scalar ~print:(fun i -> Int64.to_string i ^ "L") Gen.ui64
+let int32 =
+  make ~print:(fun i -> Int32.to_string i ^ "l") ~small:small1
+    ~shrink:Shrink.int32 Gen.ui32
+let int64 =
+  make ~print:(fun i -> Int64.to_string i ^ "L") ~small:small1
+    ~shrink:Shrink.int64 Gen.ui64
 
 let char = make_scalar ~print:(sprintf "%C") Gen.char
 let printable_char = make_scalar ~print:(sprintf "%C") Gen.printable
@@ -1169,7 +1230,7 @@ module TestResult = struct
             (* all counter-examples in [l] have same size according to [small],
                so we just compare to the first one, and we enforce
                the invariant *)
-            begin match Pervasives.compare (small instance) (small c_ex'.instance) with
+            begin match poly_compare (small instance) (small c_ex'.instance) with
             | 0 -> res.state <- Failed {instances=c_ex :: l} (* same size: add [c_ex] to [l] *)
             | n when n<0 -> res.state <- Failed {instances=[c_ex]} (* drop [l] *)
             | _ -> () (* drop [c_ex], not small enough *)
@@ -1404,11 +1465,25 @@ module Test = struct
       then the input that caused the failure is returned in [Failed].
       If [func input] raises [FailedPrecondition] then  the input is discarded, unless
          max_gen is 0. *)
-  let rec check_state state =
+  let rec check_state state : _ R.t =
     if is_done state then state.res
     else (
       state.handler state.test.name state.test Generating;
-      let input = new_input state in
+      match new_input state with
+      | i ->
+        check_state_input state i
+      | exception e ->
+        (* turn it into an error *)
+        let bt = Printexc.get_backtrace() in
+        let msg =
+          Printf.sprintf
+            "ERROR: uncaught exception in generator for test %s after %d steps:\n%s\n%s"
+            state.test.name state.test.count (Printexc.to_string e) bt
+        in
+        state.res.R.state <- R.Failed_other {msg};
+        state.res
+    )
+  and check_state_input state input =
       state.handler state.test.name state.test (Collecting input);
       state.res.R.instances <- input :: state.res.R.instances;
       collect state input;
@@ -1436,7 +1511,6 @@ module Test = struct
       match res with
         | CR_continue -> check_state state
         | CR_yield x -> x
-    )
 
   type 'a callback = string -> 'a cell -> 'a TestResult.t -> unit
 
@@ -1572,7 +1646,7 @@ module Test = struct
     let median = ref 0 in
     let median_num = ref 0 in (* how many values have we seen yet? once >= !n/2 we set median *)
     (Hashtbl.fold (fun i cnt acc -> (i,cnt)::acc) tbl [])
-    |> List.sort (fun (i,_) (j,_) -> compare i j)
+    |> List.sort (fun (i,_) (j,_) -> poly_compare i j)
     |> List.iter
       (fun (i,cnt) ->
          if !median_num < !num/2 then (

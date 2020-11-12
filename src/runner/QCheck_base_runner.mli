@@ -58,10 +58,43 @@ val set_time_between_msg : float -> unit
 (** Set the minimum tiem between messages.
     @since 0.9 *)
 
+
+(** {2 Event handlers} *)
+
+type counter = private {
+  start : float;
+  expected : int;
+  mutable gen : int;
+  mutable passed : int;
+  mutable failed : int;
+  mutable errored : int;
+}
+(** The type of counter used to keep tracks of the events received for a given
+    test cell. *)
+
+type handler = {
+  handler : 'a. 'a QCheck.Test.handler;
+}
+(** A type to represent polymorphic-enough handlers for test cells. *)
+
+type handler_gen =
+  colors:bool ->
+  debug_shrink:(out_channel option) ->
+  debug_shrink_list:(string list) ->
+  size:int -> out:out_channel -> verbose:bool -> counter -> handler
+(** An alias type to a generator of handlers for test cells. *)
+
+val default_handler : handler_gen
+(** The default handler used. *)
+
+
 (** {2 Run a Suite of Tests and Get Results} *)
 
 val run_tests :
+  ?handler:handler_gen ->
   ?colors:bool -> ?verbose:bool -> ?long:bool ->
+  ?debug_shrink:(out_channel option) ->
+  ?debug_shrink_list:(string list) ->
   ?out:out_channel -> ?rand:Random.State.t ->
   QCheck.Test.t list -> int
 (** Run a suite of tests, and print its results. This is an heritage from
@@ -82,7 +115,8 @@ val run_tests_main : ?argv:string array -> QCheck.Test.t list -> 'a
     - "--long" for running the long versions of the tests
 
     Below is an example of the output of the [run_tests] and [run_tests_main]
-    function: {v
+    function:
+    {v
 random seed: 438308050
 generated  error;  fail; pass / total -     time -- test name
 [✓] (1000)    0 ;    0 ; 1000 / 1000 --     0.5s -- list_rev_is_involutive
@@ -152,6 +186,7 @@ module Raw : sig
 
   (* main callback for display *)
   val callback :
+    colors:bool ->
     verbose:bool ->
     print_res:bool ->
     print:('a, 'b) printer ->
@@ -164,6 +199,8 @@ module Raw : sig
     cli_rand : Random.State.t;
     cli_slow_test : int; (* how many slow tests to display? *)
     cli_colors: bool;
+    cli_debug_shrink : out_channel option;
+    cli_debug_shrink_list : string list;
   }
 
   val parse_cli : full_options:bool -> string array -> cli_args

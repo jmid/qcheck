@@ -20,7 +20,7 @@ example-ounit-test:
 	@dune exec example/ounit/QCheck_ounit_test.exe
 
 example-runner:
-	@dune exec example/QCheck_runner_test.exe
+	@dune exec example/QCheck_runner_test.exe -- -v --debug-shrink=log.tmp
 
 example-alcotest:
 	@dune exec example/alcotest/QCheck_alcotest_test.exe
@@ -40,10 +40,6 @@ release: update_next_tag
 
 
 watch:
-	while find src/ -print0 | xargs -0 inotifywait -e delete_self -e modify ; do \
-		echo "============ at `date` ==========" ; \
-		sleep 0.2; \
-		make all; \
-	done
+	@dune build @all -w
 
 .PHONY: benchs tests examples update_next_tag watch release

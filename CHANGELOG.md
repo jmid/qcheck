@@ -2,7 +2,8 @@
 
 ## NEXT RELEASE
 
-- ...
+- Quote and escape in `Print.string` and `Print.char` in the `QCheck` module,
+  mirroring the `QCheck2.Print` module's behaviour
 
 ## 0.22
 

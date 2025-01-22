@@ -4,7 +4,8 @@ open QCheck2_tests
 
 let () = QCheck_base_runner.set_seed 1234
 let _ =
-  QCheck_base_runner.run_tests ~colors:false (
+  (*Memtrace.trace_if_requested ();*) (* <-- new line *)
+  QCheck_base_runner.run_tests ~colors:false (*~verbose:true*) (
     Overall.tests @
     Generator.tests @
     Shrink.tests @

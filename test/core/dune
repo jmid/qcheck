@@ -18,6 +18,11 @@
   (modules QCheck2_expect_test)
   (libraries qcheck-core qcheck-core.runner QCheck2_tests))
 
+;(executables
+;  (names QCheck2_expect_test)
+;  (modules QCheck2_expect_test)
+;  (libraries qcheck-core qcheck-core.runner QCheck2_tests memtrace))
+
 (tests
   (names QCheck_unit_tests QCheck2_unit_tests)
   (modules QCheck_unit_tests QCheck2_unit_tests)

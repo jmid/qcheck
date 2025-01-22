@@ -184,7 +184,7 @@ module Tree = struct
   let rec map (f : 'a -> 'b) (a : 'a t) : 'b t =
     let Tree (x, xs) = a in
     let y = f x in
-    let ys = fun () -> Seq.map (fun smaller_x -> map f smaller_x) xs () in
+    let ys = Seq.map (fun smaller_x -> map f smaller_x) xs in
     Tree (y, ys)
 
   (** Note that parameter order is reversed. *)
@@ -194,19 +194,88 @@ module Tree = struct
     let Tree (x0, xs) = a in
     let Tree (f0, fs) = f in
     let y = f0 x0 in
-    let ys = fun () -> Seq.append (Seq.map (fun f' -> ap f' a) fs) (Seq.map (fun x' -> ap f x') xs) () in
+    let ys = Seq.append
+        (Seq.map (fun f' -> ap f' a) fs)
+        (Seq.map (fun x' -> ap f x') xs) in
     Tree (y, ys)
 
   let (<*>) = ap
 
-  let liftA2 (f : 'a -> 'b -> 'c) (a : 'a t) (b : 'b t) : 'c t =
-    (a >|= f) <*> b
+  let liftA2 (f : 'a -> 'b -> 'c) (t1 : 'a t) (t2 : 'b t) : 'c t =
+    (map f t1) <*> t2
+(*  let Tree (x1, x1s) = t1 in
+    let Tree (x2, x2s) = t2 in
+    let f1 = f x1 in
+    let y = f1 x2 in
+    let fs = Seq.map (fun smaller_x1 -> map f smaller_x1) x1s in
+    let f' = Tree (f1, fs) in
+    let ys =
+      Seq.append
+        (*(Seq.map (fun f' -> ap f' t2) (Seq.map (fun smaller_x1 -> map f smaller_x1) x1s))*)
+        (Seq.map (fun smaller_x1 -> ap (map f smaller_x1) t2) x1s)
+        (Seq.map (fun x' -> ap f' x') x2s) in
+    Tree (y, ys) *)
+
+  let map2 = liftA2
+
+  let map3 (f : 'a -> 'b -> 'c -> 'd) (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) : 'd t =
+    (map f t1) <*> t2 <*> t3
+
+  let map4 (f : 'a -> 'b -> 'c -> 'd -> 'e) (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) : 'e t =
+    (map f t1) <*> t2 <*> t3 <*> t4
+    (*
+    map2
+      (fun (t1,t2) (t3,t4) -> f t1 t2 t3 t4)
+      (map2 (fun t1 t2 -> (t1,t2)) t1 t2)
+      (map2 (fun t3 t4 -> (t3,t4)) t3 t4)
+    *)
+  let map5 (f : 'a -> 'b -> 'c -> 'd -> 'e -> 'f) (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) (t5 : 'e t) : 'f t =
+    (map f t1) <*> t2 <*> t3 <*> t4 <*> t5
+      (*map2
+      (fun (t1,t2) (t3,t4,t5) -> f t1 t2 t3 t4 t5)
+      (map2 (fun t1 t2 -> (t1,t2)) t1 t2)
+        (map3 (fun t3 t4 t5 -> (t3,t4,t5)) t3 t4 t5)*)
+
+  let map6 (f : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g)
+             (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) (t5 : 'e t) (t6 : 'f t) : 'g t =
+    (map f t1) <*> t2 <*> t3 <*> t4 <*> t5 <*> t6
+      (*map2
+      (fun (t1,t2,t3) (t4,t5,t6) -> f t1 t2 t3 t4 t5 t6)
+      (map3 (fun t1 t2 t3 -> (t1,t2,t3)) t1 t2 t3)
+        (map3 (fun t4 t5 t6 -> (t4,t5,t6)) t4 t5 t6)*)
+
+  let map7 (f : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> 'h)
+             (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) (t5 : 'e t) (t6 : 'f t) (t7 : 'g t) : 'h t =
+    (map f t1) <*> t2 <*> t3 <*> t4 <*> t5 <*> t6 <*> t7
+      (*map3
+      (fun (t1,t2,t3) (t4,t5) (t6,t7) -> f t1 t2 t3 t4 t5 t6 t7)
+      (map3 (fun t1 t2 t3 -> (t1,t2,t3)) t1 t2 t3)
+      (map2 (fun t4 t5 -> (t4,t5)) t4 t5)
+        (map2 (fun t6 t7 -> (t6,t7)) t6 t7)*)
+
+  let map8 (f : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> 'h -> 'i)
+             (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) (t5 : 'e t) (t6 : 'f t) (t7 : 'g t) (t8 : 'h t) : 'i t =
+    (map f t1) <*> t2 <*> t3 <*> t4 <*> t5 <*> t6 <*> t7 <*> t8
+      (*map3
+      (fun (t1,t2,t3) (t4,t5,t6) (t7,t8) -> f t1 t2 t3 t4 t5 t6 t7 t8)
+      (map3 (fun t1 t2 t3 -> (t1,t2,t3)) t1 t2 t3)
+      (map3 (fun t4 t5 t6 -> (t4,t5,t6)) t4 t5 t6)
+        (map2 (fun t7 t8 -> (t7,t8)) t7 t8)*)
+
+  let map9 (f : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> 'h -> 'i -> 'j)
+             (t1 : 'a t) (t2 : 'b t) (t3 : 'c t) (t4 : 'd t) (t5 : 'e t) (t6 : 'f t) (t7 : 'g t) (t8 : 'h t) (t9 : 'i t) : 'j t =
+    (map f t1) <*> t2 <*> t3 <*> t4 <*> t5 <*> t6 <*> t7 <*> t8 <*> t9
+      (*map3
+      (fun (t1,t2,t3) (t4,t5,t6) (t7,t8,t9) -> f t1 t2 t3 t4 t5 t6 t7 t8 t9)
+      (map3 (fun t1 t2 t3 -> (t1,t2,t3)) t1 t2 t3)
+      (map3 (fun t4 t5 t6 -> (t4,t5,t6)) t4 t5 t6)
+        (map3 (fun t7 t8 t9 -> (t7,t8,t9)) t7 t8 t9)*)
 
   let rec bind (a : 'a t) (f : 'a -> 'b t) : 'b t =
     let Tree (x, xs) = a in
     let Tree (y, ys_of_x) = f x in
-    let ys_of_xs = fun () -> Seq.map (fun smaller_x -> bind smaller_x f) xs () in
-    let ys = fun () -> Seq.append ys_of_xs ys_of_x () in
+    let ys_of_xs = (*fun () ->*) Seq.map (fun smaller_x -> bind smaller_x f) xs (*()*) in
+    let ys = (*fun () ->*) Seq.append ys_of_xs ys_of_x (*()*) in
     Tree (y, ys)
 
   let (>>=) = bind
@@ -232,9 +301,16 @@ module Tree = struct
     Tree (x, xs')
 
   (** [applicative_take n trees] returns a tree of lists with at most the [n] first elements of the input list. *)
+(*
   let rec applicative_take (n : int) (l : 'a t list) : 'a list t = match (n, l) with
     | (0, _) | (_, []) -> pure []
     | (n, (tree :: trees)) -> liftA2 List.cons tree (applicative_take (pred n) trees)
+*)
+  let applicative_take (n : int) (l : 'a t list) : 'a list t =
+    let rec walk n l acc = match n,l with
+    | (0, _) | (_, []) -> map List.rev acc
+    | (n, (tree :: trees)) -> walk (pred n) trees (map2 List.cons tree acc)
+    in walk n l (pure [])
 end
 
 module Gen = struct
@@ -252,15 +328,30 @@ module Gen = struct
 
   let pure (a : 'a) : 'a t = fun _ -> Tree.pure a
 
-  let ap (f : ('a -> 'b) t) (x : 'a t) : 'b t = fun st -> Tree.ap (f st)  (x st)
+  let ap (f : ('a -> 'b) t) (x : 'a t) : 'b t =
+    fun st ->
+    let st' = RS.split st in
+    let ftree = f st in
+    let xtree = x st' in
+    Tree.ap ftree xtree
 
   let (<*>) = ap
 
-  let liftA2 (f : 'a -> 'b -> 'c) (a : 'a t) (b : 'b t) : 'c t =
-    (a >|= f) <*> b
+  let liftA2 (f : 'a -> 'b -> 'c) (a : 'a t) (b : 'b t) : 'c t = fun st ->
+    (*(a >|= f) <*> b*)
+    let st' = RS.split st in
+    let atree = a st in
+    let btree = b st' in
+    Tree.map2 f atree btree
 
-  let liftA3 (f : 'a -> 'b -> 'c -> 'd) (a : 'a t) (b : 'b t) (c : 'c t) : 'd t =
-    (a >|= f) <*> b <*> c
+  let liftA3 (f : 'a -> 'b -> 'c -> 'd) (a : 'a t) (b : 'b t) (c : 'c t) : 'd t = fun st ->
+    (*(a >|= f) <*> b <*> c*)
+    let st' = RS.split st in
+    let st'' = RS.split st' in
+    let atree = a st in
+    let btree = b st' in
+    let ctree = c st'' in
+    Tree.map3 f atree btree ctree
 
   let map2 = liftA2
 
@@ -268,11 +359,16 @@ module Gen = struct
 
   let return = pure
 
-  let bind (gen : 'a t) (f : 'a -> ('b t)) : 'b t = fun st -> Tree.bind (gen st) (fun a -> f a st)
+  let bind (gen : 'a t) (f : 'a -> ('b t)) : 'b t =
+    fun st ->
+    let st' = RS.split st in
+    let gentree = gen st in
+    Tree.bind gentree (fun a -> f a st')
 
   let (>>=) = bind
 
-  let sequence_list (l : 'a t list) : 'a list t = fun st -> List.map (fun gen -> gen st) l |> Tree.sequence_list
+  let sequence_list (l : 'a t list) : 'a list t =
+    fun st -> List.map (fun gen -> gen st) l |> Tree.sequence_list
 
   let make_primitive ~(gen : RS.t -> 'a) ~(shrink : 'a -> 'a Seq.t) : 'a t = fun st ->
     Tree.make_primitive shrink (gen st)
@@ -548,16 +644,45 @@ module Gen = struct
   let ui64 : int64 t = map Int64.abs int64
 
   (* A tail-recursive implementation over Tree.t *)
+  (*
   let list_size (size : int t) (gen : 'a t) : 'a list t =
     fun st ->
-    Tree.bind (size st) @@ fun size ->
-    let rec loop n acc =
-      if n <= 0
-      then acc
-      else (loop [@tailcall]) (n - 1) (Tree.liftA2 List.cons (gen st) acc)
-    in
-    loop size (Tree.pure [])
+    Tree.bind (size st) (fun size ->
+        let rec loop n acc st =
+          if n <= 0
+          then acc
+          else (loop [@tailcall]) (n - 1) (Tree.liftA2 List.cons (gen st) acc) st
+        in
+        loop size (Tree.pure []) st)
+  *)
 
+  let list_size (size : int t) (gen : 'a t) : 'a list t =
+    fun st ->
+    let st' = RS.split st in (* save a copy of the mutable st *)
+    let st'' = RS.split st in (* save a copy of the mutable st *)
+    let size_tree = size st' in
+    let open Tree in
+    let elem_trees_rev = ref [] in
+    let elems = List.init (root size_tree) (fun _ ->
+                    let elem_tree = gen st'' in
+                    elem_trees_rev := elem_tree :: !elem_trees_rev ;
+                    (* Performance: return the root right now, the heavy processing of shrinks can wait until/if there is a need to shrink *)
+                    root elem_tree) in
+    let shrink = fun () ->
+      let elem_trees = List.rev !elem_trees_rev in
+      let elem_list_tree = size_tree >>= fun new_size -> applicative_take new_size elem_trees in
+      (* Technically [elem_list_tree] is the whole tree, but for perf reasons we eagerly created the root above *)
+      children elem_list_tree ()
+    in
+    Tree (elems, shrink)
+(*
+        let rec loop n acc st =
+          if n <= 0
+          then (sequence_list acc)
+          else (loop [@tailcall]) (n - 1) ((gen st)::acc) st
+        in
+        loop size [] st'')
+*)
   let list (gen : 'a t) : 'a list t = list_size nat gen
 
   let list_repeat (n : int) (gen : 'a t) : 'a list t = list_size (pure n) gen
@@ -612,12 +737,32 @@ module Gen = struct
     |> List.rev_map snd
     |> Tree.pure
 
-  let pair (g1 : 'a t) (g2 : 'b t) : ('a * 'b) t = liftA2 (fun a b -> (a, b)) g1 g2
+  let pair (g1 : 'a t) (g2 : 'b t) : ('a * 'b) t = fun st1 ->
+    (*liftA2 (fun a b -> (a, b)) g1 g2*)
+    let st2 = RS.split st1 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    Tree.map2 (fun a b -> (a, b)) tr1 tr2
 
-  let triple (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) : ('a * 'b * 'c) t = (fun a b c -> (a, b, c)) <$> g1 <*> g2 <*> g3
+  let triple (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) : ('a * 'b * 'c) t = fun st1 ->
+    (*(fun a b c -> (a, b, c)) <$> g1 <*> g2 <*> g3*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    Tree.map3 (fun a b c-> (a, b, c)) tr1 tr2 tr3
 
-  let quad (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) : ('a * 'b * 'c * 'd) t =
-    (fun a b c d -> (a, b, c, d)) <$> g1 <*> g2 <*> g3 <*> g4
+  let quad (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) : ('a * 'b * 'c * 'd) t = fun st1 ->
+    (*(fun a b c d -> (a, b, c, d)) <$> g1 <*> g2 <*> g3 <*> g4*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    Tree.map4 (fun a b c d -> (a, b, c, d)) tr1 tr2 tr3 tr4
 
   let tup2 = pair
 
@@ -625,20 +770,90 @@ module Gen = struct
 
   let tup4 = quad
 
-  let tup5 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) : ('a * 'b * 'c * 'd * 'e) t =
-    (fun a b c d e -> (a, b, c, d, e)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5
+  let tup5 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) : ('a * 'b * 'c * 'd * 'e) t = fun st1 ->
+    (*(fun a b c d e -> (a, b, c, d, e)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let st5 = RS.split st4 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    let tr5 = g5 st5 in
+    Tree.map5 (fun a b c d e -> (a, b, c, d, e)) tr1 tr2 tr3 tr4 tr5
 
-  let tup6 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) : ('a * 'b * 'c * 'd * 'e * 'f) t =
-    (fun a b c d e f -> (a, b, c, d, e, f)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6
+  let tup6 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) : ('a * 'b * 'c * 'd * 'e * 'f) t = fun st1 ->
+    (*(fun a b c d e f -> (a, b, c, d, e, f)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let st5 = RS.split st4 in
+    let st6 = RS.split st5 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    let tr5 = g5 st5 in
+    let tr6 = g6 st6 in
+    Tree.map6 (fun a b c d e f -> (a, b, c, d, e, f)) tr1 tr2 tr3 tr4 tr5 tr6
 
-  let tup7 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g) t =
-    (fun a b c d e f g -> (a, b, c, d, e, f, g)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7
+  let tup7 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g) t = fun st1 ->
+    (*(fun a b c d e f g -> (a, b, c, d, e, f, g)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let st5 = RS.split st4 in
+    let st6 = RS.split st5 in
+    let st7 = RS.split st6 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    let tr5 = g5 st5 in
+    let tr6 = g6 st6 in
+    let tr7 = g7 st7 in
+    Tree.map7 (fun a b c d e f g -> (a, b, c, d, e, f, g)) tr1 tr2 tr3 tr4 tr5 tr6 tr7
 
-  let tup8 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) (g8 : 'h t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) t =
-    (fun a b c d e f g h -> (a, b, c, d, e, f, g, h)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7 <*> g8
+  let tup8 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) (g8 : 'h t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) t = fun st1 ->
+    (*(fun a b c d e f g h -> (a, b, c, d, e, f, g, h)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7 <*> g8*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let st5 = RS.split st4 in
+    let st6 = RS.split st5 in
+    let st7 = RS.split st6 in
+    let st8 = RS.split st7 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    let tr5 = g5 st5 in
+    let tr6 = g6 st6 in
+    let tr7 = g7 st7 in
+    let tr8 = g8 st8 in
+    Tree.map8 (fun a b c d e f g h -> (a, b, c, d, e, f, g, h)) tr1 tr2 tr3 tr4 tr5 tr6 tr7 tr8
 
-  let tup9 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) (g8 : 'h t) (g9 : 'i t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) t =
-    (fun a b c d e f g h i -> (a, b, c, d, e, f, g, h, i)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7 <*> g8 <*> g9
+  let tup9 (g1 : 'a t) (g2 : 'b t) (g3 : 'c t) (g4 : 'd t) (g5 : 'e t) (g6 : 'f t) (g7 : 'g t) (g8 : 'h t) (g9 : 'i t) : ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) t = fun st1 ->
+    (*(fun a b c d e f g h i -> (a, b, c, d, e, f, g, h, i)) <$> g1 <*> g2 <*> g3 <*> g4 <*> g5 <*> g6 <*> g7 <*> g8 <*> g9*)
+    let st2 = RS.split st1 in
+    let st3 = RS.split st2 in
+    let st4 = RS.split st3 in
+    let st5 = RS.split st4 in
+    let st6 = RS.split st5 in
+    let st7 = RS.split st6 in
+    let st8 = RS.split st7 in
+    let st9 = RS.split st8 in
+    let tr1 = g1 st1 in
+    let tr2 = g2 st2 in
+    let tr3 = g3 st3 in
+    let tr4 = g4 st4 in
+    let tr5 = g5 st5 in
+    let tr6 = g6 st6 in
+    let tr7 = g7 st7 in
+    let tr8 = g8 st8 in
+    let tr9 = g9 st9 in
+    Tree.map9 (fun a b c d e f g h i -> (a, b, c, d, e, f, g, h, i)) tr1 tr2 tr3 tr4 tr5 tr6 tr7 tr8 tr9
 
   (** Don't reuse {!int_range} which is much less performant (many more checks because of the possible range and origins). As a [string] generator may call this hundreds or even thousands of times for a single value, it's worth optimizing. *)
   let char : char t = fun st ->
@@ -674,6 +889,7 @@ module Gen = struct
 
   let bytes_size ?(gen = char) (size : int t) : bytes t = fun st ->
     let open Tree in
+    (*let st,st' = RS.split_state st in*)
     size st >>= fun size ->
     (* Adding char shrinks to a mutable list is expensive: ~20-30% cost increase *)
     (* Adding char shrinks to a mutable lazy list is less expensive: ~15% cost increase *)
@@ -695,6 +911,28 @@ module Gen = struct
     in
     Tree (bytes, shrink)
 
+(*
+let bytes_size ?(gen = char) (size : int t) : bytes t = fun st ->
+    let open Tree in
+    (*let st,st' = RS.split_state st in*)
+    let size_tree = size st in
+    (* Adding char shrinks to a mutable list is expensive: ~20-30% cost increase *)
+    (* Adding char shrinks to a mutable lazy list is less expensive: ~15% cost increase *)
+    let char_trees_rev = ref [] in
+    let bytes = Bytes.init (root size_tree) (fun _ ->
+                    let char_tree = gen st in
+                    char_trees_rev := char_tree :: !char_trees_rev ;
+                    (* Performance: return the root right now, the heavy processing of shrinks can wait until/if there is a need to shrink *)
+                    root char_tree) in
+    let shrink = fun () ->
+      let char_trees = List.rev !char_trees_rev in
+      let char_list_tree = size_tree >>= fun new_size -> applicative_take new_size char_trees in
+      let bytes_tree = char_list_tree >|= fun char_list -> List.to_seq char_list |> Bytes.of_seq in
+      (* Technically [bytes_tree] is the whole tree, but for perf reasons we eagerly created the root above *)
+      children bytes_tree ()
+    in
+    Tree (bytes, shrink)
+*)
   let string_size ?(gen = char) (size : int t) : string t =
     bytes_size ~gen size >|= Bytes.unsafe_to_string
 

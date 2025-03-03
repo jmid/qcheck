@@ -1,11 +1,12 @@
-open QCheck_tests
+let print_float i64 =
+  Printf.printf "bits: %Li - float: %.2f\n%!" i64 (Int64.to_float i64)
 
-(* Calling runners *)
-
-let () = QCheck_base_runner.set_seed 1234
-let _ =
-  QCheck_base_runner.run_tests ~colors:false (
-    Stats.tests)
-
-let () = QCheck_base_runner.set_seed 153870556
-let _  = QCheck_base_runner.run_tests ~colors:false [Stats.int_dist_empty_bucket]
+let _ = List.iter print_float
+    [
+      4879367852577116075L;
+      4880329516726610144L;
+      4882384430223028138L;
+      4882522499579827044L;
+      4883095049439037711L;
+      4883176358557700215L;
+    ]

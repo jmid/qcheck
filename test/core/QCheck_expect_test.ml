@@ -1,5 +1,6 @@
 let print_float i64 =
-  Printf.printf "bits: %Li - float: %g\n%!" i64 (Int64.to_float i64)
+  let f = Int64.to_float i64 in
+  Printf.printf "bits: %Li - float: %.1f - float compact notation: %g\n%!" i64 f f
 
 let _ = List.iter print_float
     [

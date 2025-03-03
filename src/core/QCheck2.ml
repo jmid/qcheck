@@ -2053,6 +2053,7 @@ module Test = struct
       |> (fun s -> if !num>0 then s /. float_of_int !num else s)
       |> sqrt
     in
+    let bits = Int64.bits_of_float stddev in
     (* compute median *)
     let median = ref 0 in
     let median_num = ref 0 in (* how many values have we seen yet? once >= !n/2 we set median *)
@@ -2092,8 +2093,8 @@ module Test = struct
     let out = Buffer.create 128 in
     Printf.bprintf out "stats %s:\n" name;
     Printf.bprintf out
-      "  num: %d, avg: %.2f, stddev: %.2f, median %d, min %d, max %d\n"
-      !num !avg stddev !median min_idx max_idx;
+      "  num: %d, avg: %.2f, stddev: %.2f, stddev bits: %Li median %d, min %d, max %d\n"
+      !num !avg stddev bits !median min_idx max_idx;
     let indwidth =
       let str_width i = String.length (Printf.sprintf "%d" i) in
       List.map str_width [min_idx; max_idx; min_idx + bucket_size * hist_size] |> List.fold_left max min_int in
